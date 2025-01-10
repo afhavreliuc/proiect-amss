@@ -45,6 +45,15 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// middleware for authorization based on role
+const authorizeRole = (role) => (req, res, next) => {
+  if (req.user.role !== role) {
+    return res.status(403).json({ message: `Access denied for ${role}s only.` });
+  }
+  next();
+};
+
+
 // ========== Routes ==========
 
 // 1. Register
@@ -62,8 +71,8 @@ app.post('/api/register', async (req, res) => {
 
     // Insert user
     await pool.query(
-      'INSERT INTO users (username, password) VALUES (?, ?)',
-      [username, hashedPassword]
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [username, hashedPassword, role || 'CLIENT']
     );
 
     return res.status(201).json({ message: 'User registered successfully' });
@@ -89,36 +98,104 @@ app.post('/api/login', async (req, res) => {
     }
 
     // Generate JWT
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
-      expiresIn: '1d', // token expires in 1 day
-    });
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
 
-    return res.json({ token, username: user.username });
+    return res.json({ token, username: user.username, role: user.role });
   } catch (error) {
     console.error('Login Error:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// 3. Get all rooms
-app.get('/api/rooms', async (req, res) => {
+// ========== Admin Routes ==========
+
+
+// 3. Add a motel
+app.post('/api/motels', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
+  const { name, location, description } = req.body;
   try {
-    const [rows] = await pool.query('SELECT * FROM rooms');
-    return res.json(rows);
+    await pool.query('INSERT INTO motels (name, location, description) VALUES (?, ?, ?)', [name, location, description]);
+    return res.status(201).json({ message: 'Motel added successfully' });
   } catch (error) {
-    console.error('Get Rooms Error:', error);
+    console.error('Add Motel Error:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// 4. Book a room
-app.post('/api/book', authenticateToken, async (req, res) => {
+// 4. Modify a motel
+app.put('/api/motels/:id', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  const { name, location, description } = req.body;
+  try {
+    await pool.query('UPDATE motels SET name = ?, location = ?, description = ? WHERE id = ?', [name, location, description, id]);
+    return res.json({ message: 'Motel updated successfully' });
+  } catch (error) {
+    console.error('Update Motel Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 5. Delete a motel
+app.delete('/api/motels/:id', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM motels WHERE id = ?', [id]);
+    return res.json({ message: 'Motel deleted successfully' });
+  } catch (error) {
+    console.error('Delete Motel Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 6. Add a room
+app.post('/api/rooms', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
+  const { motelId, name, price } = req.body;
+  try {
+    await pool.query('INSERT INTO rooms (motel_id, name, price) VALUES (?, ?, ?)', [motelId, name, price]);
+    return res.status(201).json({ message: 'Room added successfully' });
+  } catch (error) {
+    console.error('Add Room Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 7. Modify a room
+app.put('/api/rooms/:id', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  const { name, price } = req.body;
+  try {
+    await pool.query('UPDATE rooms SET name = ?, price = ? WHERE id = ?', [name, price, id]);
+    return res.json({ message: 'Room updated successfully' });
+  } catch (error) {
+    console.error('Update Room Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 8. Delete a room
+app.delete('/api/rooms/:id', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM rooms WHERE id = ?', [id]);
+    return res.json({ message: 'Room deleted successfully' });
+  } catch (error) {
+    console.error('Delete Room Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// ========== Client Routes ==========
+
+// 9. Book a room
+app.post('/api/book', authenticateToken, authorizeRole('CLIENT'), async (req, res) => {
   const { roomId, checkIn, checkOut } = req.body;
   try {
-    await pool.query(
-      'INSERT INTO bookings (user_id, room_id, check_in, check_out) VALUES (?,?,?,?)',
-      [req.user.id, roomId, checkIn, checkOut]
-    );
+    await pool.query('INSERT INTO bookings (user_id, room_id, check_in, check_out) VALUES (?, ?, ?, ?)', [req.user.id, roomId, checkIn, checkOut]);
     return res.status(201).json({ message: 'Room booked successfully' });
   } catch (error) {
     console.error('Booking Error:', error);
@@ -126,67 +203,77 @@ app.post('/api/book', authenticateToken, async (req, res) => {
   }
 });
 
-// 5. Get user bookings
-app.get('/api/mybookings', authenticateToken, async (req, res) => {
+// 10. View user bookings
+app.get('/api/mybookings', authenticateToken, authorizeRole('CLIENT'), async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT b.id, b.room_id, b.check_in, b.check_out, r.name as room_name, r.price, r.rating ' +
+      'SELECT b.id, b.room_id, b.check_in, b.check_out, r.name AS room_name, r.price, m.name AS motel_name ' +
       'FROM bookings b ' +
       'JOIN rooms r ON b.room_id = r.id ' +
+      'JOIN motels m ON r.motel_id = m.id ' +
       'WHERE b.user_id = ? ' +
       'ORDER BY b.check_in DESC',
       [req.user.id]
     );
     return res.json(rows);
   } catch (error) {
-    console.error('MyBookings Error:', error);
+    console.error('Get Bookings Error:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// 6. Rate a room
-app.post('/api/rate', authenticateToken, async (req, res) => {
-  const { bookingId, newRating } = req.body;
+// 11. Update user booking
+app.put('/api/mybookings/:id', authenticateToken, authorizeRole('CLIENT'), async (req, res) => {
+  const { id } = req.params;
+  const { checkIn, checkOut } = req.body;
   try {
-    // Check if this booking belongs to the user and if check_out has passed
-    const [bookings] = await pool.query(
-      'SELECT b.*, r.rating, r.rating_count ' +
-      'FROM bookings b ' +
-      'JOIN rooms r ON b.room_id = r.id ' +
-      'WHERE b.id = ? AND b.user_id = ?',
-      [bookingId, req.user.id]
-    );
-
-    if (bookings.length === 0) {
-      return res.status(400).json({ message: 'Invalid booking or no permission' });
+    const [rows] = await pool.query('SELECT * FROM bookings WHERE id = ? AND user_id = ?', [id, req.user.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Booking not found or not authorized' });
     }
-
-    const booking = bookings[0];
-    const now = new Date();
-
-    if (new Date(booking.check_out) > now) {
-      return res.status(400).json({ message: 'Cannot rate before checkout time' });
-    }
-
-    // Calculate new average rating
-    const oldRating = booking.rating;
-    const oldCount = booking.rating_count;
-    const updatedCount = oldCount + 1;
-    const updatedRating = ((oldRating * oldCount) + newRating) / updatedCount;
-
-    await pool.query(
-      'UPDATE rooms SET rating = ?, rating_count = ? WHERE id = ?',
-      [updatedRating, updatedCount, booking.room_id]
-    );
-
-    return res.json({ message: 'Room rated successfully' });
+    await pool.query('UPDATE bookings SET check_in = ?, check_out = ? WHERE id = ?', [checkIn, checkOut, id]);
+    return res.json({ message: 'Booking updated successfully' });
   } catch (error) {
-    console.error('Rating Error:', error);
+    console.error('Update Booking Error:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Start server on PORT (default 5000)
+// 12. Cancel user booking
+app.delete('/api/mybookings/:id', authenticateToken, authorizeRole('CLIENT'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query('SELECT * FROM bookings WHERE id = ? AND user_id = ?', [id, req.user.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Booking not found or not authorized' });
+    }
+    await pool.query('DELETE FROM bookings WHERE id = ?', [id]);
+    return res.json({ message: 'Booking canceled successfully' });
+  } catch (error) {
+    console.error('Delete Booking Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 13. Submit feedback for a motel
+app.post('/api/feedback', authenticateToken, authorizeRole('CLIENT'), async (req, res) => {
+  const { motelId, rating, comment } = req.body;
+  try {
+    const [motel] = await pool.query('SELECT rating, rating_count FROM motels WHERE id = ?', [motelId]);
+    if (motel.length === 0) {
+      return res.status(404).json({ message: 'Motel not found' });
+    }
+
+    const newRating = ((motel[0].rating * motel[0].rating_count) + rating) / (motel[0].rating_count + 1);
+    await pool.query('UPDATE motels SET rating = ?, rating_count = rating_count + 1 WHERE id = ?', [newRating, motelId]);
+    return res.json({ message: 'Feedback submitted successfully' });
+  } catch (error) {
+    console.error('Feedback Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
