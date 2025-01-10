@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
+import './Rooms.css';
 
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
@@ -48,23 +49,22 @@ export default function Rooms() {
   };
 
   return (
-    <div>
+    <div className="rooms-container">
       <h2>Available Rooms</h2>
-      <p style={{ color: 'red' }}>{message}</p>
-      <div>
-        <label>Check-In: </label>
+      <p className="error-message">{message}</p>
+      <div className="booking-info">
+        <label>Check-In:</label>
         <input 
           type="datetime-local"
           onChange={(e) => setBookingInfo({ ...bookingInfo, checkIn: e.target.value })}
         />
-        <label style={{ marginLeft: '10px' }}>Check-Out: </label>
+        <label>Check-Out:</label>
         <input 
           type="datetime-local"
           onChange={(e) => setBookingInfo({ ...bookingInfo, checkOut: e.target.value })}
         />
       </div>
-      <br />
-      <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse' }}>
+      <table className="rooms-table">
         <thead>
           <tr>
             <th>Room Name</th>
@@ -77,7 +77,7 @@ export default function Rooms() {
           {rooms.map(room => (
             <tr key={room.id}>
               <td>{room.name}</td>
-              <td>{room.price}</td>
+              <td>${room.price.toFixed(2)}</td>
               <td>{room.rating.toFixed(1)}</td>
               <td>
                 <button onClick={() => handleBook(room.id)}>Book Now</button>
