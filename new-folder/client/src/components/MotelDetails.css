@@ -1,0 +1,36 @@
+/* Example: MotelDetails.css */
+
+.motel-details-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .motel-details-container h1 {
+    margin-bottom: 0.5rem;
+  }
+  
+  .motel-info {
+    margin-bottom: 2rem;
+  }
+  
+  .motel-info p {
+    margin: 0.3rem 0;
+  }
+  
+  .rooms-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .room-card {
+    border: 1px solid #eee;
+    padding: 1rem;
+    border-radius: 4px;
+  }
+  
+  .room-card h3 {
+    margin-top: 0;
+  }
+  

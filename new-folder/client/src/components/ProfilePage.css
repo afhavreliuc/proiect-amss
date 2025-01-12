@@ -1,0 +1,42 @@
+/* ProfilePage.css */
+
+.profile-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .profile-page h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .profile-info {
+    margin-bottom: 2rem;
+  }
+  
+  /* Display form in a simple vertical layout */
+  .profile-info label {
+    display: block;
+    margin-top: 1rem;
+  }
+  
+  .profile-info input {
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 0.5rem;
+    box-sizing: border-box;
+  }
+  
+  .ratings-list {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .rating-item {
+    border: 1px solid #eee;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }
+  

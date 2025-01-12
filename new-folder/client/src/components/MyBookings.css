@@ -1,0 +1,26 @@
+.book-button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.book-button:hover {
+  background-color: #0056b3;
+}
+
+.booking-dates {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.booking-dates label {
+  margin-right: 5px;
+}
+
+.booking-dates input {
+  padding: 5px;
+}

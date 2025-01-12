@@ -1,0 +1,55 @@
+/* Example: HomePage.css */
+
+.home-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .home-container h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .search-fields {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .search-fields input[type="date"] {
+    padding: 0.4rem;
+  }
+  
+  .search-button {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+  }
+  
+  /* Search results */
+  .motel-card {
+    border: 1px solid #eee;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }
+  
+  .motel-card h2 {
+    margin: 0 0 0.5rem;
+  }
+  .motel-card p {
+    margin: 0.25rem 0;
+  }
+  
+  .motel-card a {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: #007bff;
+    text-decoration: none;
+  }
+  
+  .motel-card a:hover {
+    text-decoration: underline;
+  }
+  

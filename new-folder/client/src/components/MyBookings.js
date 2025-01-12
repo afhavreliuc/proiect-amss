@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
+import './MyBookings.css';
 
 export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
@@ -38,10 +39,10 @@ export default function MyBookings() {
   };
 
   return (
-    <div>
+    <div className="mybookings-container">
       <h2>My Bookings</h2>
-      <p style={{ color: 'red' }}>{message}</p>
-      <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse' }}>
+      <p className="error-message">{message}</p>
+      <table className="bookings-table">
         <thead>
           <tr>
             <th>Room Name</th>
@@ -60,6 +61,7 @@ export default function MyBookings() {
               <td>{b.rating && b.rating.toFixed(1)}</td>
               <td>
                 <input 
+                  className="rating-input"
                   type="number" 
                   min="1" 
                   max="5" 

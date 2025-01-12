@@ -1,74 +1,123 @@
-import React, { useState } from 'react';
-import API from '../api';
-import './Register.css';
+import React, { useState } from "react";
+import "./Register.css";
 
-export default function Register() {
+const Register = () => {
   const [formData, setFormData] = useState({
-    username: '',
-    password: ''
+    username: "",
+    password: "",
+    first_name: "",
+    last_name: "",
+    phone: "",
+    email: "",
+    address: "",
   });
-  const [message, setMessage] = useState('');
+
+  const [message, setMessage] = useState("");
 
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage('');
+
     try {
-      const res = await API.post('/register', {
-        username: formData.username,
-        password: formData.password
+      const response = await fetch("http://localhost:5000/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
       });
-      setMessage(res.data.message);
-    } catch (error) {
-      if (error.response) {
-        setMessage(error.response.data.message);
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessage(data.message || "Registration successful!");
+        setFormData({
+          username: "",
+          password: "",
+          first_name: "",
+          last_name: "",
+          phone: "",
+          email: "",
+          address: "",
+        }); // Clear the form
       } else {
-        setMessage('Error connecting to the server');
+        const errorData = await response.json();
+        setMessage(errorData.message || "Registration failed!");
       }
+    } catch (error) {
+      setMessage("Error connecting to the server.");
+      console.error(error);
     }
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <h2 className="title">Create a New Account</h2>
-        <p className="message">{message}</p>
-        <form onSubmit={handleSubmit}>
-          <div className="inputGroup">
-            <label className="label">Username</label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className="input"
-              required
-            />
-          </div>
-          <div className="inputGroup">
-            <label className="label">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="input"
-              required
-            />
-          </div>
-          <button type="submit" className="button">
-            Register
-          </button>
-          <div className="footer">
-            <p>
-              Already have an account? <a href="/login" className="link">Login</a>
-            </p>
-          </div>
-        </form>
-      </div>
+    <div className="register-container">
+      <h2>Register</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          value={formData.username}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="first_name"
+          placeholder="First Name"
+          value={formData.first_name}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="last_name"
+          placeholder="Last Name"
+          value={formData.last_name}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="phone"
+          placeholder="Phone"
+          value={formData.phone}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="address"
+          placeholder="Address"
+          value={formData.address}
+          onChange={handleChange}
+          required
+        />
+        <button type="submit">Register</button>
+      </form>
+      {message && <p>{message}</p>}
     </div>
   );
-}
+};
+
+export default Register;

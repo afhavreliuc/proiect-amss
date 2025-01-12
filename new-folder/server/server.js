@@ -14,7 +14,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-// Remove the second "const mysql = require('mysql2/promise');" line — it's already declared above
 
 const pool = mysql.createPool({
   host: DB_HOST,
@@ -25,23 +24,20 @@ const pool = mysql.createPool({
 });
 
 // Middleware to verify JWT
-const authenticateToken = async (req, res, next) => {
+const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  if (!authHeader) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
+  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
 
-  const token = authHeader.split(' ')[1]; // Bearer <token>
-  if (!token) {
-    return res.status(401).json({ message: 'No token found' });
-  }
+  const token = authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'Invalid token' });
 
   try {
-    const user = jwt.verify(token, JWT_SECRET);
-    req.user = user; // user { id, username, iat, exp }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
     next();
   } catch (err) {
-    return res.status(403).json({ message: 'Token is invalid or expired' });
+    console.error('Token error:', err);
+    res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
 
@@ -54,37 +50,44 @@ const authorizeRole = (role) => (req, res, next) => {
 };
 
 
+
 // ========== Routes ==========
 
 // 1. Register
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    // Check if user exists
-    const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-    if (rows.length > 0) {
-      return res.status(400).json({ message: 'Username already exists' });
-    }
+  const { username, password, first_name, last_name, phone, email, address } = req.body;
 
-    // Hash password
+  // Validate all fields
+  if (!username || !password || !email || !first_name || !last_name || !phone || !address) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  try {
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
+    // Insert user into the database with the default role of 'client'
+    const role = 'client';
     await pool.query(
-      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-      [username, hashedPassword, role || 'CLIENT']
+      `INSERT INTO users (username, password, first_name, last_name, phone, email, address, role) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [username, hashedPassword, first_name, last_name, phone, email, address, role]
     );
 
-    return res.status(201).json({ message: 'User registered successfully' });
+    res.status(201).json({ message: 'User registered successfully!' });
   } catch (error) {
     console.error('Register Error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ message: 'Username or email already exists.' });
+    }
+    res.status(500).json({ message: 'Error registering user.' });
   }
 });
 
 // 2. Login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
+
   try {
     const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
     if (rows.length === 0) {
@@ -104,10 +107,10 @@ app.post('/api/login', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    return res.json({ token, username: user.username, role: user.role });
+    res.json({ token, username: user.username, role: user.role });
   } catch (error) {
     console.error('Login Error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -191,20 +194,43 @@ app.delete('/api/rooms/:id', authenticateToken, authorizeRole('ADMIN'), async (r
 
 // ========== Client Routes ==========
 
-// 9. Book a room
-app.post('/api/book', authenticateToken, authorizeRole('CLIENT'), async (req, res) => {
-  const { roomId, checkIn, checkOut } = req.body;
+// server.js
+
+app.get('/api/motels/:id', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    await pool.query('INSERT INTO bookings (user_id, room_id, check_in, check_out) VALUES (?, ?, ?, ?)', [req.user.id, roomId, checkIn, checkOut]);
-    return res.status(201).json({ message: 'Room booked successfully' });
+    const motelQuery = `
+      SELECT id, name, description, utilities, rating
+      FROM motels
+      WHERE id = ?;
+    `;
+    const roomQuery = `
+      SELECT id, name, price, utilities, max_people
+      FROM rooms
+      WHERE motel_id = ?
+      ORDER BY price ASC;
+    `;
+
+    const [motel] = await pool.query(motelQuery, [id]);
+    const [rooms] = await pool.query(roomQuery, [id]);
+
+    if (!motel.length) {
+      return res.status(404).json({ message: 'Motel not found' });
+    }
+
+    console.log('Rooms Data:', rooms); // Add this line to log rooms data
+
+    res.json({ motel: motel[0], rooms });
   } catch (error) {
-    console.error('Booking Error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('Motel Details Error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
+
 // 10. View user bookings
-app.get('/api/mybookings', authenticateToken, authorizeRole('CLIENT'), async (req, res) => {
+app.get('/api/mybookings', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT b.id, b.room_id, b.check_in, b.check_out, r.name AS room_name, r.price, m.name AS motel_name ' +
@@ -277,3 +303,155 @@ app.post('/api/feedback', authenticateToken, authorizeRole('CLIENT'), async (req
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+app.post('/api/search', async (req, res) => {
+  const { checkIn, checkOut } = req.body;
+
+  try {
+    const query = `
+      SELECT m.id, m.name, m.rating, MIN(r.price) AS starting_price
+      FROM motels m
+      JOIN rooms r ON m.id = r.motel_id
+      WHERE r.id NOT IN (
+        SELECT room_id
+        FROM bookings
+        WHERE NOT (check_out <= ? OR check_in >= ?)
+      )
+      GROUP BY m.id, m.name, m.rating
+      ORDER BY starting_price ASC;
+    `;
+
+    const [results] = await pool.query(query, [checkIn, checkOut]);
+    res.json(results);
+  } catch (error) {
+    console.error('Search Error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// In server.js or a routes file
+// In server.js
+
+app.get('/api/profile', authenticateToken, async (req, res) => {
+  try {
+    // Fetch the user's basic details
+    const [rows] = await pool.query(
+      `SELECT first_name, last_name, email, phone, rating, balance
+       FROM users
+       WHERE id = ?`,
+      [req.user.id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userRow = rows[0];
+    const fullName = `${userRow.first_name} ${userRow.last_name}`;
+
+    // Fetch the user's feedback ratings
+    const [ratings] = await pool.query(
+      `SELECT f.rating, f.comment, m.name AS motelName
+       FROM feedback f
+       JOIN motels m ON f.motel_id = m.id
+       WHERE f.user_id = ?`,
+      [req.user.id]
+    );
+
+    // Construct the detailed user data object
+    const userData = {
+      id: req.user.id,
+      fullName,
+      email: userRow.email,
+      phone: userRow.phone,
+      rating: userRow.rating || 0,
+      balance: userRow.balance || 0,
+      ratingsGiven: ratings.map((rating) => ({
+        motelName: rating.motelName,
+        rating: rating.rating,
+        comment: rating.comment,
+      })), // Changed 'feedback' to 'ratingsGiven'
+    };
+
+    res.json(userData);
+  } catch (error) {
+    console.error('Get Profile Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/profile', authenticateToken, async (req, res) => {
+  try {
+    // The request body might have
+    // { fullName, email, phone, rating, balance, ratingsGiven }
+    const {
+      fullName,
+      email,
+      phone
+      // rating, balance, etc. - depends on how you handle updates
+    } = req.body;
+
+    // If you're storing first/last name separately, parse them
+    // e.g. fullName = "John Smith"
+    const nameParts = fullName.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Update just the columns that are editable
+    await pool.query(
+      `UPDATE users
+       SET first_name = ?, last_name = ?, email = ?, phone = ?
+       WHERE id = ?`,
+      [firstName, lastName, email, phone, req.user.id]
+    );
+
+    return res.json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Update Profile Error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 9. Book a room
+app.post('/api/book', authenticateToken, async (req, res) => {
+  const { roomId, checkIn, checkOut, totalPrice } = req.body;
+
+  if (!roomId || !checkIn || !checkOut || !totalPrice) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  try {
+    // Fetch user's balance
+    const [user] = await pool.query('SELECT balance FROM users WHERE id = ?', [req.user.id]);
+    if (!user.length) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user[0].balance < totalPrice) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    // Deduct balance
+    await pool.query('UPDATE users SET balance = balance - ? WHERE id = ?', [totalPrice, req.user.id]);
+
+    // Create booking
+    await pool.query('INSERT INTO bookings (user_id, room_id, check_in, check_out) VALUES (?, ?, ?, ?)', [
+      req.user.id,
+      roomId,
+      checkIn,
+      checkOut,
+    ]);
+
+    res.status(201).json({ message: 'Booking successful' });
+  } catch (error) {
+    console.error('Error processing booking:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+
+
+
