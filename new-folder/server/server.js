@@ -215,11 +215,12 @@ app.get('/api/motels/:id', async (req, res) => {
     const [motel] = await pool.query(motelQuery, [id]);
     const [rooms] = await pool.query(roomQuery, [id]);
 
+    console.log('Motel Data:', motel);
+    console.log('Rooms Data:', rooms);
+
     if (!motel.length) {
       return res.status(404).json({ message: 'Motel not found' });
     }
-
-    console.log('Rooms Data:', rooms); // Add this line to log rooms data
 
     res.json({ motel: motel[0], rooms });
   } catch (error) {
@@ -227,6 +228,7 @@ app.get('/api/motels/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 
 // 10. View user bookings
@@ -307,6 +309,10 @@ app.listen(PORT, () => {
 app.post('/api/search', async (req, res) => {
   const { checkIn, checkOut } = req.body;
 
+  if (!checkIn || !checkOut) {
+    return res.status(400).json({ message: 'Check-in and check-out dates are required' });
+  }
+
   try {
     const query = `
       SELECT m.id, m.name, m.rating, MIN(r.price) AS starting_price
@@ -322,16 +328,12 @@ app.post('/api/search', async (req, res) => {
     `;
 
     const [results] = await pool.query(query, [checkIn, checkOut]);
-    res.json(results);
+    res.json({ results }); // Ensure the response includes a 'results' key with an array
   } catch (error) {
     console.error('Search Error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
-
-// In server.js or a routes file
-// In server.js
 
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
@@ -450,6 +452,72 @@ app.post('/api/book', authenticateToken, async (req, res) => {
   }
 });
 
+// Add money to user's balance
+app.post('/api/profile/add-balance', authenticateToken, async (req, res) => {
+  const { amount } = req.body;
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return res.status(400).json({ message: 'Invalid amount provided.' });
+  }
+
+  try {
+    await pool.query('UPDATE users SET balance = balance + ? WHERE id = ?', [amount, req.user.id]);
+    const [updatedUser] = await pool.query('SELECT balance FROM users WHERE id = ?', [req.user.id]);
+    res.json({ message: 'Balance updated successfully!', balance: updatedUser[0].balance });
+  } catch (error) {
+    console.error('Add Balance Error:', error);
+    res.status(500).json({ message: 'Server error while updating balance.' });
+  }
+});
+
+// Rate a booking and update the motel's rating
+app.post('/api/rate', authenticateToken, async (req, res) => {
+  const { bookingId, newRating } = req.body;
+
+  // Validate the input
+  if (!bookingId || !newRating || newRating < 1 || newRating > 5) {
+    return res.status(400).json({ message: 'Invalid booking ID or rating.' });
+  }
+
+  try {
+    // Check if the booking exists and belongs to the authenticated user
+    const [booking] = await pool.query(
+      'SELECT b.*, r.motel_id FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.id = ? AND b.user_id = ?',
+      [bookingId, req.user.id]
+    );
+
+    if (!booking.length) {
+      return res.status(404).json({ message: 'Booking not found or not authorized.' });
+    }
+
+    const { motel_id } = booking[0];
+
+    // Update the rating for the booking
+    await pool.query('UPDATE bookings SET rating = ? WHERE id = ?', [newRating, bookingId]);
+
+    // Recalculate the motel's overall rating
+    const [ratings] = await pool.query(
+      'SELECT AVG(b.rating) AS averageRating, COUNT(b.rating) AS ratingCount ' +
+      'FROM bookings b ' +
+      'JOIN rooms r ON b.room_id = r.id ' +
+      'WHERE r.motel_id = ? AND b.rating IS NOT NULL',
+      [motel_id]
+    );
+
+    const { averageRating, ratingCount } = ratings[0];
+
+    // Update the motel's rating and rating count
+    await pool.query(
+      'UPDATE motels SET rating = ?, rating_count = ? WHERE id = ?',
+      [averageRating, ratingCount, motel_id]
+    );
+
+    res.json({ message: 'Rating submitted successfully!' });
+  } catch (error) {
+    console.error('Error while rating:', error);
+    res.status(500).json({ message: 'Server error while submitting rating.' });
+  }
+});
 
 
 

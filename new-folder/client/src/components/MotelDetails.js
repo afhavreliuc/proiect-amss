@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './MotelDetails.css';
 
 const MotelDetails = () => {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [motel, setMotel] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookingInfo, setBookingInfo] = useState({
-    checkIn: '',
-    checkOut: '',
+    checkIn: new URLSearchParams(location.search).get('checkIn') || '',
+    checkOut: new URLSearchParams(location.search).get('checkOut') || '',
   });
 
   useEffect(() => {
@@ -29,13 +30,14 @@ const MotelDetails = () => {
 
   const calculateTotalPrice = (pricePerNight) => {
     if (!bookingInfo.checkIn || !bookingInfo.checkOut) return 0;
-
+  
     const checkInDate = new Date(bookingInfo.checkIn);
     const checkOutDate = new Date(bookingInfo.checkOut);
     const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-
-    return nights > 0 ? nights * pricePerNight : 0;
-  };
+    const numericPrice = parseFloat(pricePerNight); // Ensure price is treated as a number
+  
+    return nights > 0 && !isNaN(numericPrice) ? nights * numericPrice : 0;
+  };  
 
   const handleBookClick = (room) => {
     if (!bookingInfo.checkIn || !bookingInfo.checkOut) {
@@ -83,24 +85,28 @@ const MotelDetails = () => {
       </div>
 
       <div className='rooms-list'>
-        {rooms.map((room) => (
-          <div key={room.id} className='room-card'>
-            <h3>{room.name}</h3>
-            <p>Price: ${typeof room.price === 'number' ? room.price.toFixed(2) : 'N/A'}</p>
-            <p>Max People: {room.max_people}</p>
-            <p>Utilities: {room.utilities}</p>
-            <p>
-              Total Price: $
-              {typeof room.price === 'number' && bookingInfo.checkIn && bookingInfo.checkOut
-                ? calculateTotalPrice(room.price).toFixed(2)
-                : 'N/A'}
-            </p>
-            <button onClick={() => handleBookClick(room)} className='book-button'>
-              Book
-            </button>
-          </div>
-        ))}
+        {rooms.map((room) => {
+          const numericPrice = parseFloat(room.price); // Parse price as a number
+          return (
+            <div key={room.id} className='room-card'>
+              <h3>{room.name}</h3>
+              <p>Price: ${!isNaN(numericPrice) ? numericPrice.toFixed(2) : 'N/A'}</p>
+              <p>Max People: {room.max_people}</p>
+              <p>Utilities: {room.utilities}</p>
+              <p>
+                Total Price: $
+                {bookingInfo.checkIn && bookingInfo.checkOut && !isNaN(numericPrice)
+                  ? calculateTotalPrice(numericPrice).toFixed(2)
+                  : 'N/A'}
+              </p>
+              <button onClick={() => handleBookClick(room)} className='book-button'>
+                Book
+              </button>
+            </div>
+          );
+        })}
       </div>
+
     </div>
   );
 };

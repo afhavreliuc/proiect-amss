@@ -16,11 +16,12 @@ const HomePage = () => {
         body: JSON.stringify({ checkIn, checkOut }),
       });
       const data = await response.json();
-      setResults(data);
+      console.log('API Response:', data); // Log the API response
+      setResults(data.results || []); // Ensure results is always an array
     } catch (error) {
       console.error('Search Error:', error);
     }
-  };
+  };  
 
   return (
     <div className='home-container'>
@@ -41,15 +42,16 @@ const HomePage = () => {
       <button className='search-button' onClick={handleSearch}>Search</button>
       </div>
       <div>
-        {results.map((motel) => (
-          <div key={motel.id} className='motel-card' >
+        {Array.isArray(results) && results.map((motel) => (
+          <div key={motel.id} className='motel-card'>
             <h2>{motel.name}</h2>
             <p>Starting Price: ${motel.starting_price}</p>
             <p>Rating: {motel.rating}</p>
-            <a href={`/motels/${motel.id}`}>View Details</a>
+            <a href={`/motels/${motel.id}?checkIn=${checkIn}&checkOut=${checkOut}`}>View Details</a>
           </div>
         ))}
       </div>
+
     </div>
   );
 };

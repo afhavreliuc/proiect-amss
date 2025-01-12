@@ -1,5 +1,3 @@
-// ProfilePage.js
-
 import React, { useEffect, useState } from 'react';
 import API from '../api'; // Ensure this is correctly configured
 import './ProfilePage.css';
@@ -11,17 +9,16 @@ export default function ProfilePage() {
     phone: '',
     rating: 0,
     balance: 0,
-    ratingsGiven: [] // Ensure this matches the server response
+    ratingsGiven: []
   });
 
-  // Toggling between display and editing form
   const [editMode, setEditMode] = useState(false);
+  const [addBalanceAmount, setAddBalanceAmount] = useState(0); // Amount to add to balance
 
   useEffect(() => {
     fetchUserProfile();
   }, []);
 
-  // Fetch the user profile from the server
   const fetchUserProfile = async () => {
     try {
       const res = await API.get('/profile'); // Ensure the endpoint is correct
@@ -32,22 +29,20 @@ export default function ProfilePage() {
     }
   };
 
-  // Update state when editing fields
-  const handleChange = (e) => {
-    setUser({ ...user, [e.target.name]: e.target.value });
-  };
+  const handleAddBalance = async () => {
+    if (!addBalanceAmount || addBalanceAmount <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
 
-  // Submit the updated profile to the server
-  const handleSave = async () => {
     try {
-      await API.put('/profile', user); // Ensure the endpoint is correct
-      setEditMode(false);
-      // Refresh the user data
-      fetchUserProfile();
-      alert('Profile updated successfully!');
+      const res = await API.post('/profile/add-balance', { amount: addBalanceAmount }); // Ensure the endpoint is correct
+      alert(res.data.message);
+      setUser((prevUser) => ({ ...prevUser, balance: res.data.balance }));
+      setAddBalanceAmount(0); // Reset the input field
     } catch (error) {
-      console.error('Profile update error:', error);
-      alert('Failed to update profile. Please try again.');
+      console.error('Add Balance Error:', error);
+      alert('Failed to add balance. Please try again.');
     }
   };
 
@@ -56,7 +51,6 @@ export default function ProfilePage() {
       <h1>My Profile</h1>
 
       <div className="profile-info">
-        {/* === Display Mode === */}
         {!editMode && (
           <>
             <p><strong>Full Name:</strong> {user.fullName}</p>
@@ -65,13 +59,26 @@ export default function ProfilePage() {
             <p><strong>My Overall Rating:</strong> {Number(user.rating || 0).toFixed(1)}</p>
             <p><strong>Balance:</strong> ${Number(user.balance || 0).toFixed(2)}</p>
 
-            <button onClick={() => setEditMode(true)}>
-              Edit Profile
-            </button>
+            <div className="add-balance-section">
+              <input
+                type="text" // Change from "number" to "text"
+                placeholder="Enter amount"
+                value={addBalanceAmount === 0 ? '' : addBalanceAmount} // Set empty string if value is 0
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Validate input to allow only numbers
+                  if (!isNaN(value) && Number(value) >= 0) {
+                    setAddBalanceAmount(Number(value));
+                  }
+                }}
+              />
+              <button onClick={handleAddBalance}>Add Balance</button>
+            </div>
+
+            <button onClick={() => setEditMode(true)}>Edit Profile</button>
           </>
         )}
 
-        {/* === Edit Mode === */}
         {editMode && (
           <>
             <label>Full Name:</label>
@@ -79,7 +86,7 @@ export default function ProfilePage() {
               type="text"
               name="fullName"
               value={user.fullName}
-              onChange={handleChange}
+              onChange={(e) => setUser({ ...user, fullName: e.target.value })}
             />
 
             <label>Email:</label>
@@ -87,7 +94,7 @@ export default function ProfilePage() {
               type="email"
               name="email"
               value={user.email}
-              onChange={handleChange}
+              onChange={(e) => setUser({ ...user, email: e.target.value })}
             />
 
             <label>Phone:</label>
@@ -95,15 +102,10 @@ export default function ProfilePage() {
               type="text"
               name="phone"
               value={user.phone}
-              onChange={handleChange}
+              onChange={(e) => setUser({ ...user, phone: e.target.value })}
             />
 
-            <button onClick={handleSave}>
-              Save
-            </button>
-            <button onClick={() => setEditMode(false)}>
-              Cancel
-            </button>
+            <button onClick={() => setEditMode(false)}>Cancel</button>
           </>
         )}
       </div>

@@ -7,6 +7,7 @@ import HomePage from './components/HomePage'; // Import HomePage
 import MotelDetails from './components/MotelDetails'; // Import MotelDetails
 import ProfilePage from './components/ProfilePage';
 import ConfirmBooking from './components/ConfirmBooking';
+import DetailsPage from './components/DetailsPage'; // Import DetailsPage
 
 function App() {
   const token = localStorage.getItem('token');
@@ -27,14 +28,11 @@ function App() {
           {token ? (
             <>
               <Link to="/mybookings">My Bookings</Link>
-              {/* Add My Profile link here */}
               <Link to="/profile" style={{ marginLeft: '10px' }}>My Profile</Link>
-        
               <button onClick={handleLogout} style={{ marginLeft: '10px' }}>Logout</button>
             </>
           ) : (
             <>
-              
               <Link to="/login">Login</Link>
               <Link to="/register" style={{ marginLeft: '10px' }}>Register</Link>
             </>
@@ -48,6 +46,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           {/* Motel Details Page */}
           <Route path="/motels/:id" element={<MotelDetails />} />
+          {/* Details Page */}
+          <Route path="/details/:hotelId" element={<DetailsPage />} />
           {/* Other Routes */}
           <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" />} />
           <Route path="/login" element={!token ? <Login /> : <Navigate to="/" />} />
