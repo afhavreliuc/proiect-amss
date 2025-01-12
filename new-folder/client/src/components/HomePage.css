@@ -1,55 +1,85 @@
-/* Example: HomePage.css */
-
+/* HomePage container */
 .home-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-  
-  .home-container h1 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-  }
-  
-  .search-fields {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-  
-  .search-fields input[type="date"] {
-    padding: 0.4rem;
-  }
-  
-  .search-button {
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-  }
-  
-  /* Search results */
-  .motel-card {
-    border: 1px solid #eee;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: 4px;
-  }
-  
-  .motel-card h2 {
-    margin: 0 0 0.5rem;
-  }
-  .motel-card p {
-    margin: 0.25rem 0;
-  }
-  
-  .motel-card a {
-    display: inline-block;
-    margin-top: 0.5rem;
-    color: #007bff;
-    text-decoration: none;
-  }
-  
-  .motel-card a:hover {
-    text-decoration: underline;
-  }
-  
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.home-container h1 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Search fields container */
+.search-fields {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.search-fields input[type="date"] {
+  padding: 0.4rem;
+}
+
+.search-button {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.search-button:hover {
+  background-color: #0056b3;
+}
+
+/* Results container with grid layout */
+.results-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+  width: 100%; /* Ensure the container takes full width */
+}
+
+/* Individual motel cards */
+.motel-card {
+  border: 1px solid #ddd;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: center; /* Center content inside cards */
+}
+
+.motel-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.motel-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.motel-card p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.motel-card a {
+  display: block;
+  margin: 1rem auto 0;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.motel-card a:hover {
+  text-decoration: underline;
+}

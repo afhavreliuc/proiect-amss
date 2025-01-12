@@ -6,7 +6,10 @@ const HomePage = () => {
   const [checkOut, setCheckOut] = useState('');
   const [results, setResults] = useState([]);
 
+  const [loading, setLoading] = useState(false);
+
   const handleSearch = async () => {
+    setLoading(true);
     try {
       const response = await fetch('http://localhost:5000/api/search', {
         method: 'POST',
@@ -15,13 +18,15 @@ const HomePage = () => {
         },
         body: JSON.stringify({ checkIn, checkOut }),
       });
+  
       const data = await response.json();
-      console.log('API Response:', data); // Log the API response
-      setResults(data.results || []); // Ensure results is always an array
+      setResults(data.results || []);
     } catch (error) {
       console.error('Search Error:', error);
+    } finally {
+      setLoading(false);
     }
-  };  
+  };
 
   return (
     <div className='home-container'>
@@ -41,16 +46,20 @@ const HomePage = () => {
       />
       <button className='search-button' onClick={handleSearch}>Search</button>
       </div>
-      <div>
-        {Array.isArray(results) && results.map((motel) => (
-          <div key={motel.id} className='motel-card'>
-            <h2>{motel.name}</h2>
-            <p>Starting Price: ${motel.starting_price}</p>
-            <p>Rating: {motel.rating}</p>
-            <a href={`/motels/${motel.id}?checkIn=${checkIn}&checkOut=${checkOut}`}>View Details</a>
-          </div>
-        ))}
+      <div className="results-container">
+        {Array.isArray(results) &&
+          results.map((motel) => (
+            <div key={motel.id} className="motel-card">
+              <h2>{motel.name}</h2>
+              <p>Starting Price: ${motel.starting_price}</p>
+              <p>Rating: {motel.rating}</p>
+              <a href={`/motels/${motel.id}?checkIn=${checkIn}&checkOut=${checkOut}`}>
+                View Details
+              </a>
+            </div>
+          ))}
       </div>
+
 
     </div>
   );

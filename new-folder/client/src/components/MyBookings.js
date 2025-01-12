@@ -56,41 +56,46 @@ export default function MyBookings() {
   return (
     <div className="mybookings-container">
       <h2>My Bookings</h2>
-      <p className="error-message">{message}</p>
-      <table className="bookings-table">
-        <thead>
-          <tr>
-            <th>Room Name</th>
-            <th>Check In</th>
-            <th>Check Out</th>
-            <th>Current Rating</th>
-            <th>Rate This Room</th>
-          </tr>
-        </thead>
-        <tbody>
+      {message && <p className="error-message">{message}</p>}
+      {bookings.length > 0 ? (
+        <div className="bookings-grid">
           {bookings.map((b) => (
-            <tr key={b.id}>
-              <td>{b.room_name}</td>
-              <td>{new Date(b.check_in).toLocaleString()}</td>
-              <td>{new Date(b.check_out).toLocaleString()}</td>
-              <td>{b.rating ? b.rating.toFixed(1) : 'N/A'}</td>
-              <td>
+            <div key={b.id} className="booking-card">
+              <h3>{b.room_name}</h3>
+              <p>
+                <strong>Check In:</strong>{' '}
+                {new Date(b.check_in).toLocaleString()}
+              </p>
+              <p>
+                <strong>Check Out:</strong>{' '}
+                {new Date(b.check_out).toLocaleString()}
+              </p>
+              
+              <div className="rate-room">
+                <p>Stars: </p>
                 <input
                   className="rating-input"
                   type="number"
                   min="1"
                   max="5"
-                  value={ratings[b.id] || ''} // Get the rating for this booking
+                  value={ratings[b.id] || ''}
                   onChange={(e) =>
                     handleRatingChange(b.id, Number(e.target.value))
                   }
                 />
-                <button onClick={() => handleRate(b.id)}>Submit Rating</button>
-              </td>
-            </tr>
+                <button
+                  className="submit-rating-button"
+                  onClick={() => handleRate(b.id)}
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      ) : (
+        <p className="no-bookings-message">You have no bookings yet.</p>
+      )}
     </div>
   );
 }

@@ -116,18 +116,37 @@ app.post('/api/login', async (req, res) => {
 
 // ========== Admin Routes ==========
 
-
-// 3. Add a motel
-app.post('/api/motels', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
-  const { name, location, description } = req.body;
+app.get('/api/motels', async (req, res) => {
   try {
-    await pool.query('INSERT INTO motels (name, location, description) VALUES (?, ?, ?)', [name, location, description]);
-    return res.status(201).json({ message: 'Motel added successfully' });
+    const [rows] = await pool.query('SELECT id, name, location, description, utilities, rating FROM motels');
+    res.json(rows);
   } catch (error) {
-    console.error('Add Motel Error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching motels:', error);
+    res.status(500).json({ message: 'Error fetching motels.' });
   }
 });
+
+// 3. Add a motel
+// Add a new motel
+app.post('/api/motels', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
+  const { name, location, description } = req.body;
+
+  if (!name || !location || !description) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  try {
+    await pool.query(
+      'INSERT INTO motels (name, location, description) VALUES (?, ?, ?)',
+      [name, location, description]
+    );
+    res.status(201).json({ message: 'Motel added successfully!' });
+  } catch (error) {
+    console.error('Error adding motel:', error);
+    res.status(500).json({ message: 'Error adding motel.' });
+  }
+});
+
 
 // 4. Modify a motel
 app.put('/api/motels/:id', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
@@ -155,16 +174,26 @@ app.delete('/api/motels/:id', authenticateToken, authorizeRole('ADMIN'), async (
 });
 
 // 6. Add a room
+// Add a new room to a motel
 app.post('/api/rooms', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
   const { motelId, name, price } = req.body;
+
+  if (!motelId || !name || !price) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
   try {
-    await pool.query('INSERT INTO rooms (motel_id, name, price) VALUES (?, ?, ?)', [motelId, name, price]);
-    return res.status(201).json({ message: 'Room added successfully' });
+    await pool.query(
+      'INSERT INTO rooms (motel_id, name, price) VALUES (?, ?, ?)',
+      [motelId, name, price]
+    );
+    res.status(201).json({ message: 'Room added successfully!' });
   } catch (error) {
-    console.error('Add Room Error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('Error adding room:', error);
+    res.status(500).json({ message: 'Error adding room.' });
   }
 });
+
 
 // 7. Modify a room
 app.put('/api/rooms/:id', authenticateToken, authorizeRole('ADMIN'), async (req, res) => {
@@ -198,7 +227,6 @@ app.delete('/api/rooms/:id', authenticateToken, authorizeRole('ADMIN'), async (r
 
 app.get('/api/motels/:id', async (req, res) => {
   const { id } = req.params;
-
   try {
     const motelQuery = `
       SELECT id, name, description, utilities, rating
@@ -208,15 +236,11 @@ app.get('/api/motels/:id', async (req, res) => {
     const roomQuery = `
       SELECT id, name, price, utilities, max_people
       FROM rooms
-      WHERE motel_id = ?
-      ORDER BY price ASC;
+      WHERE motel_id = ?;
     `;
 
     const [motel] = await pool.query(motelQuery, [id]);
     const [rooms] = await pool.query(roomQuery, [id]);
-
-    console.log('Motel Data:', motel);
-    console.log('Rooms Data:', rooms);
 
     if (!motel.length) {
       return res.status(404).json({ message: 'Motel not found' });
@@ -224,11 +248,10 @@ app.get('/api/motels/:id', async (req, res) => {
 
     res.json({ motel: motel[0], rooms });
   } catch (error) {
-    console.error('Motel Details Error:', error);
+    console.error('Error fetching motel details:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 
 // 10. View user bookings

@@ -21,6 +21,7 @@ export default function Login() {
       if (res.data.token) {
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('username', res.data.username);
+        localStorage.setItem('role', res.data.role); // Store the user's role
         window.location.href = '/';
       } else {
         setMessage('Login failed, please try again');
@@ -35,45 +36,26 @@ export default function Login() {
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <h2 className="title">Login to Your Account</h2>
-        <p className="message">{message}</p>
-        <form onSubmit={handleSubmit}>
-          <div className="inputGroup">
-            <label className="label">Username</label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className="input"
-              required
-            />
-          </div>
-          <div className="inputGroup">
-            <label className="label">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="input"
-              required
-            />
-          </div>
-          <button type="submit" className="button">
-            Login
-          </button>
-          <div className="footer">
-            <p>
-              Don't have an account? <a href="/register" className="link">Sign up</a>
-            </p>
-          </div>
-        </form>
-      </div>
+    <div className="login-container">
+      <h2>Login</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          value={formData.username}
+          onChange={handleChange}
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+        />
+        <button type="submit">Login</button>
+      </form>
+      {message && <p className="error-message">{message}</p>}
     </div>
   );
 }
-
-
